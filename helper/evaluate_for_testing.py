@@ -39,7 +39,7 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
     counter_no_amelioration = 0
     best_model_state_dict = deepcopy(model.state_dict())
     
-    for epoch in range(epochs):
+    for epoch in range(1, epochs + 1):
         
         model = model.train()
         
@@ -131,4 +131,4 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
     loss_test_mae_unscaled = loss_test_mae_unscaled / dataset_test.__len__()
     relative_error = relative_error / dataset_test.__len__()
     
-    return model, loss_test_mse, loss_test_mae, loss_test_mse_unscaled, loss_test_mae_unscaled, relative_error, max_error_absolute, max_error_relative
+    return model, loss_test_mse, loss_test_mae, loss_test_mse_unscaled, loss_test_mae_unscaled, relative_error, max_error_absolute, max_error_relative, epoch
