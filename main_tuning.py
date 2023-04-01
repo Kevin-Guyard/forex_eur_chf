@@ -10,12 +10,15 @@ from helper import objective, ForexDataset
 def main():
     
     TUNING_PATIENCE = 5
-    TUNING_EPOCHS = 1
+    TUNING_EPOCHS = 50
+    
+    REPOSITORY_DATA_PREPROCESSED = 'data preprocessed'
+    REPOSITORY_STUDIES = 'studies'
     
     args = sys.argv[1:]
     
     simplefilter("ignore")
-    #optuna.logging.set_verbosity(optuna.logging.WARNING)
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
     
     model_name = args[0]
     target = args[1]
@@ -25,14 +28,14 @@ def main():
     
     for i in range(4):
         
-        with open('./data preprocessed/dataset_tuning_train_' + str(i) + '.pt', 'rb') as file:
+        with open(os.path.join(REPOSITORY_DATA_PREPROCESSED, 'dataset_tuning_train_' + str(i) + '.pt'), 'rb') as file:
             dataset_tuning_trains.append(torch.load(file, pickle_module=pickle))
             
-        with open('./data preprocessed/dataset_tuning_validation_' + str(i) + '.pt', 'rb') as file:
+        with open(os.path.join(REPOSITORY_DATA_PREPROCESSED, 'dataset_tuning_validation_' + str(i) + '.pt'), 'rb') as file:
             dataset_tuning_validations.append(torch.load(file, pickle_module=pickle))
             
-    if os.path.exists(os.path.join('studies', target, 'study ' + target + ' ' + model_name + '.pkl')):
-        with open(os.path.join('studies', target, 'study ' + target + ' ' + model_name + '.pkl'), 'rb') as file:
+    if os.path.exists(os.path.join(REPOSITORY_STUDIES, target, 'study ' + target + ' ' + model_name + '.pkl')):
+        with open(os.path.join(REPOSITORY_STUDIES, target, 'study ' + target + ' ' + model_name + '.pkl'), 'rb') as file:
             study = pickle.load(file)
     else:
         study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=42))
@@ -52,7 +55,7 @@ def main():
             timeout=None, 
             n_jobs=1)
         
-        with open(os.path.join('studies', target, 'study ' + target + ' ' + model_name + '.pkl'), 'wb') as file:
+        with open(os.path.join(REPOSITORY_STUDIES, target, 'study ' + target + ' ' + model_name + '.pkl'), 'wb') as file:
             pickle.dump(study, file)
     
     
