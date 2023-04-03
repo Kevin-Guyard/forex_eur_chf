@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from copy import deepcopy
+import gc
 
 
 def evaluate_for_tuning(model, dataset_train, dataset_validation, target, optimizer, batch_size_train, batch_size_validation, learning_rate, weight_decay, patience, epochs):
@@ -80,5 +81,7 @@ def evaluate_for_tuning(model, dataset_train, dataset_validation, target, optimi
     model.cpu()
     dataset_train.cpu()
     dataset_validation.cpu()
+    gc.collect()
+    torch.cuda.empty_cache()
                 
     return best_validation_loss
