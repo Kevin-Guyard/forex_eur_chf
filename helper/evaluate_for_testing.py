@@ -21,10 +21,8 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
     
     criterion_mse = nn.MSELoss(reduction='sum')
     criterion_mae = nn.L1Loss(reduction='sum')
-    
-    if optimizer == 'SGD':
-        optimizer = optim.SGD(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    elif optimizer == 'Adam':
+
+    if optimizer == 'Adam':
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     elif optimizer == 'AdamW':
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)

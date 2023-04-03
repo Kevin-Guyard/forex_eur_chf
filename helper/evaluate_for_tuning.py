@@ -18,10 +18,8 @@ def evaluate_for_tuning(model, dataset_train, dataset_validation, target, optimi
     dataset_validation.cuda()
 
     criterion_mse = nn.MSELoss(reduction='sum')
-    
-    if optimizer == 'SGD':
-        optimizer = optim.SGD(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    elif optimizer == 'Adam':
+
+    if optimizer == 'Adam':
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     elif optimizer == 'AdamW':
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
