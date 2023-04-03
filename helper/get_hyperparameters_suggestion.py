@@ -3,7 +3,7 @@
 def get_hyperparameters_suggestion(model_name, trial):
 
     trial.suggest_int("batch_size_train", low=4, high=9)
-    trial.suggest_categorical("optimizer", ["SGD", "Adam", "AdamW"])
+    trial.suggest_categorical("optimizer", ["Adam", "AdamW"])
     trial.suggest_float("learning_rate", 1e-5, 1e0, log=True)
     trial.suggest_float("weight_decay", 1e-5, 1e0, log=True)
     
