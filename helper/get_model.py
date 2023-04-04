@@ -19,6 +19,7 @@ def get_model(model_name, **params):
                 'month': params['embedding_dim_month'],
                 'day': params['embedding_dim_day'],
                 'hour': params['embedding_dim_hour'],
+                'weekday': params['embedding_dim_weekday']
             },
             n_previous_values={
                 'hour': params.get('n_previous_hour_values', 0),

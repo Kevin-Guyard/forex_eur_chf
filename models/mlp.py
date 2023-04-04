@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class Embedding(nn.Module):
     
-    def __init__(self, dropout, embedding_dim_year, embedding_dim_month, embedding_dim_day, embedding_dim_hour):
+    def __init__(self, dropout, embedding_dim_year, embedding_dim_month, embedding_dim_day, embedding_dim_hour, embedding_dim_weekday):
         
         super(Embedding, self).__init__()
         
@@ -12,6 +12,7 @@ class Embedding(nn.Module):
         self.embedding_month = nn.Embedding(num_embeddings=12, embedding_dim=embedding_dim_month)
         self.embedding_day = nn.Embedding(num_embeddings=31, embedding_dim=embedding_dim_day)
         self.embedding_hour = nn.Embedding(num_embeddings=24, embedding_dim=embedding_dim_hour)
+        self.embedding_weekday = nn.Embedding(num_embeddings=6, embedding_dim=embedding_dim_weekday)
         
         self.dropout = nn.Dropout(p=dropout)
         
@@ -22,7 +23,8 @@ class Embedding(nn.Module):
                 self.embedding_year(x[:, 0]),
                 self.embedding_month(x[:, 1]),
                 self.embedding_day(x[:, 2]),
-                self.embedding_hour(x[:, 3])
+                self.embedding_hour(x[:, 3]),
+                self.embedding_weekday(x[:, 4])
             ], dim=1))
     
 class MLP(nn.Module):
@@ -41,7 +43,8 @@ class MLP(nn.Module):
             embedding_dim_year=embedding_dims['year'], 
             embedding_dim_month=embedding_dims['month'], 
             embedding_dim_day=embedding_dims['day'], 
-            embedding_dim_hour=embedding_dims['hour'])
+            embedding_dim_hour=embedding_dims['hour'],
+            embedding_dim_weekday=embedding_dims['weekday'])
         
         layers_size = [embedding_dims['year'] + embedding_dims['month'] + embedding_dims['day'] + embedding_dims['hour'] + (self.n_previous_hour_values + self.n_previous_day_values + self.n_previous_week_values + self.n_previous_month_values + 1) * n_features] + d_hidden_layers
                 

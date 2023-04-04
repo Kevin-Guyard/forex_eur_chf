@@ -14,6 +14,7 @@ def get_hyperparameters_suggestion(model_name, trial):
         trial.suggest_int("embedding_dim_month", low=2, high=7)
         trial.suggest_int("embedding_dim_day", low=4, high=18)
         trial.suggest_int("embedding_dim_hour", low=4, high=15)
+        trial.suggest_int("embedding_dim_weekday", low=2, high=4)
         
         if model_name[4:] == "HourMemory":
         
