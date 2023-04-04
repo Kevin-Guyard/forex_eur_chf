@@ -46,7 +46,7 @@ class MLP(nn.Module):
             embedding_dim_hour=embedding_dims['hour'],
             embedding_dim_weekday=embedding_dims['weekday'])
         
-        layers_size = [embedding_dims['year'] + embedding_dims['month'] + embedding_dims['day'] + embedding_dims['hour'] + (self.n_previous_hour_values + self.n_previous_day_values + self.n_previous_week_values + self.n_previous_month_values + 1) * n_features] + d_hidden_layers
+        layers_size = [embedding_dims['year'] + embedding_dims['month'] + embedding_dims['day'] + embedding_dims['hour'] + embedding_dims['weekday'] + (self.n_previous_hour_values + self.n_previous_day_values + self.n_previous_week_values + self.n_previous_month_values + 1) * n_features] + d_hidden_layers
                 
         layers = [
             nn.Sequential(
