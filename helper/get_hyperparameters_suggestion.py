@@ -44,6 +44,20 @@ def get_hyperparameters_suggestion(model_name, trial):
             
         for i in range(int(model_name[3])):
             trial.suggest_int("d_hidden_layer_" + str(i), low=5, high=1000, log=True)
+            
+        if int(model_name[3]) > 0:
+            trial.suggest_categorical("hidden_layers_structure", [
+                "Activation-Dropout",
+                "Dropout-Activation",
+                "Batchnorm-Activation",
+                "Activation-Batchnorm",
+                "Activation-Batchnorm-Dropout",
+                "Activation-Dropout-Batchnorm",
+                "Dropout-Activation-Batchnorm",
+                "Batchnorm-Activation-Dropout",
+                "Dropout-Batchnorm-Activation",
+                "Batchnorm-Dropout-Activation"
+            ])
 
     else:
         

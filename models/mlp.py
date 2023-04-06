@@ -29,7 +29,7 @@ class Embedding(nn.Module):
     
 class MLP(nn.Module):
     
-    def __init__(self, dropout, embedding_dims, n_previous_values, d_hidden_layers, n_features=8):
+    def __init__(self, dropout, embedding_dims, n_previous_values, d_hidden_layers, hidden_layers_structure, n_features=8):
         
         super(MLP, self).__init__()
         
@@ -47,20 +47,153 @@ class MLP(nn.Module):
             embedding_dim_weekday=embedding_dims['weekday'])
         
         layers_size = [embedding_dims['year'] + embedding_dims['month'] + embedding_dims['day'] + embedding_dims['hour'] + embedding_dims['weekday'] + (self.n_previous_hour_values + self.n_previous_day_values + self.n_previous_week_values + self.n_previous_month_values + 1) * n_features] + d_hidden_layers
+        
+        if hidden_layers_structure == "Batchnorm-Activation":
+            
+            layers = [
+                nn.Sequential(
+                    nn.Linear(in_features, out_features),
+                    nn.BatchNorm1d(out_features),
+                    nn.ReLU()
+                )
+                for in_features, out_features in zip(
+                    layers_size[:-1],
+                    layers_size[1:]
+                )
+            ] + [nn.Linear(layers_size[-1], 1)]
+            
+        elif hidden_layers_structure == "Activation-Batchnorm":
+            
+            layers = [
+                nn.Sequential(
+                    nn.Linear(in_features, out_features),
+                    nn.ReLU(),
+                    nn.BatchNorm1d(out_features)
+                )
+                for in_features, out_features in zip(
+                    layers_size[:-1],
+                    layers_size[1:]
+                )
+            ] + [nn.Linear(layers_size[-1], 1)]
+            
+        elif hidden_layers_structure == "Activation-Dropout":
+            
+            layers = [
+                nn.Sequential(
+                    nn.Linear(in_features, out_features),
+                    nn.ReLU(),
+                    nn.Dropout(dropout)
+                )
+                for in_features, out_features in zip(
+                    layers_size[:-1],
+                    layers_size[1:]
+                )
+            ] + [nn.Linear(layers_size[-1], 1)]
+            
+        elif hidden_layers_structure == "Dropout-Activation":
+            
+            layers = [
+                nn.Sequential(
+                    nn.Linear(in_features, out_features),
+                    nn.Dropout(dropout),
+                    nn.ReLU()
+                )
+                for in_features, out_features in zip(
+                    layers_size[:-1],
+                    layers_size[1:]
+                )
+            ] + [nn.Linear(layers_size[-1], 1)]
+            
+        elif hidden_layers_structure == "Batchnorm-Activation-Dropout":
                 
-        layers = [
-            nn.Sequential(
-                nn.Linear(in_features, out_features),
-                nn.BatchNorm1d(out_features),
-                nn.ReLU(),
-                nn.Dropout(dropout)
-            )
-            for in_features, out_features in zip(
-                layers_size[:-1],
-                layers_size[1:]
-            )
-        ] + [nn.Linear(layers_size[-1], 1)]
-
+            layers = [
+                nn.Sequential(
+                    nn.Linear(in_features, out_features),
+                    nn.BatchNorm1d(out_features),
+                    nn.ReLU(),
+                    nn.Dropout(dropout)
+                )
+                for in_features, out_features in zip(
+                    layers_size[:-1],
+                    layers_size[1:]
+                )
+            ] + [nn.Linear(layers_size[-1], 1)]
+            
+        elif hidden_layers_structure == "Dropout-Activation-Batchnorm":
+                
+            layers = [
+                nn.Sequential(
+                    nn.Linear(in_features, out_features),
+                    nn.Dropout(dropout),
+                    nn.ReLU(),
+                    nn.BatchNorm1d(out_features)
+                )
+                for in_features, out_features in zip(
+                    layers_size[:-1],
+                    layers_size[1:]
+                )
+            ] + [nn.Linear(layers_size[-1], 1)]
+            
+        elif hidden_layers_structure == "Activation-Batchnorm-Dropout":
+            
+            layers = [
+                nn.Sequential(
+                    nn.Linear(in_features, out_features),
+                    nn.ReLU(),
+                    nn.BatchNorm1d(out_features),
+                    nn.Dropout(dropout)
+                )
+                for in_features, out_features in zip(
+                    layers_size[:-1],
+                    layers_size[1:]
+                )
+            ] + [nn.Linear(layers_size[-1], 1)]
+            
+        elif hidden_layers_structure == "Activation-Droupout-Batchnorm":
+            
+            layers = [
+                nn.Sequential(
+                    nn.Linear(in_features, out_features),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                    nn.BatchNorm1d(out_features)
+                )
+                for in_features, out_features in zip(
+                    layers_size[:-1],
+                    layers_size[1:]
+                )
+            ] + [nn.Linear(layers_size[-1], 1)]
+            
+        elif hidden_layers_structure == "Batchnorm-Dropout-Activation":
+            
+            layers = [
+                nn.Sequential(
+                    nn.Linear(in_features, out_features),
+                    nn.BatchNorm1d(out_features),
+                    nn.Dropout(dropout),
+                    nn.ReLU()
+                )
+                for in_features, out_features in zip(
+                    layers_size[:-1],
+                    layers_size[1:]
+                )
+            ] + [nn.Linear(layers_size[-1], 1)]
+            
+        elif hidden_layers_structure == "Droupout-Batchnorm-Activation":
+            
+            layers = [
+                nn.Sequential(
+                    nn.Linear(in_features, out_features),
+                    nn.Dropout(dropout),
+                    nn.BatchNorm1d(out_features),
+                    nn.ReLU()
+                )
+                for in_features, out_features in zip(
+                    layers_size[:-1],
+                    layers_size[1:]
+                )
+            ] + [nn.Linear(layers_size[-1], 1)]
+            
         self.mlp = nn.Sequential(*layers)
         
     def forward(self, x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month):
