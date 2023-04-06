@@ -5,7 +5,7 @@
 #SBATCH --partition shared-gpu
 #SBATCH --gpus=1
 #SBATCH --time 12:00:00
-#SBATCH --mem-per-cpu=10000
+#SBATCH --mem=10000
 
 module load GCCcore/11.2.0 Python/3.9.6
 module load GCCcore/10.2.0 CUDA/11.1.1

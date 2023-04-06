@@ -8,7 +8,7 @@ def objective(trial, dataset_tuning_trains, dataset_tuning_validations, model_na
     
     model = get_model(model_name, **trial.params)
                 
-    return cross_evaluate_for_tuning(
+    score = cross_evaluate_for_tuning(
         model, 
         dataset_tuning_trains, 
         dataset_tuning_validations, 
@@ -19,3 +19,7 @@ def objective(trial, dataset_tuning_trains, dataset_tuning_validations, model_na
         weight_decay=trial.params['weight_decay'], 
         patience=patience, 
         epochs=epochs)
+    
+    del model
+    
+    return score
