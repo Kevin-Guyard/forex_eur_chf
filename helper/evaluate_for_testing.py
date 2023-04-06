@@ -6,199 +6,213 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from copy import deepcopy
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+import gc
 
 
 def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test, scaler_y_bid, scaler_y_ask, target, optimizer, batch_size_train, batch_size_validation, batch_size_test, learning_rate, weight_decay, patience, epochs):
     
+    # Set random seed
     torch.manual_seed(42)
     random.seed(42)
     np.random.seed(42)
     
+    # Transfer model and datasets to GPU
     model.cuda()
     dataset_train.cuda()
     dataset_validation.cuda()
     dataset_test.cuda()
     
-    criterion_mse = nn.MSELoss(reduction='sum')
-    criterion_mae = nn.L1Loss(reduction='sum')
-    criterion = nn.MSELoss(reduction='sum')
+    # Loss functions
+    criterion_mse_y_bid = nn.MSELoss(reduction='sum')
+    criterion_mae_y_bid = nn.L1Loss(reduction='sum')
+    criterion_mse_y_ask = nn.MSELoss(reduction='sum')
+    criterion_mae_y_ask = nn.L1Loss(reduction='sum')
 
+    # Optimizer
     if optimizer == 'Adam':
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     elif optimizer == 'AdamW':
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     else:
-        raise NotImplementedError("Optimizer not correct")
+        raise NotImplementedError("Optimizer {} not implemented".format(optimizer))
     
+    # Wrap datasets into dataloader
     data_loader_train = DataLoader(dataset_train, batch_size=batch_size_train, shuffle=True)
     data_loader_validation = DataLoader(dataset_validation, batch_size=batch_size_validation, shuffle=False)
     data_loader_test = DataLoader(dataset_test, batch_size=batch_size_test, shuffle=False)
     
+    # Early stopping variables
     best_validation_loss_mse = np.inf
     best_epoch = 0
     counter_no_amelioration = 0
     best_model_state_dict = deepcopy(model.state_dict())
     
-    training_loss_mse, training_loss_mae, validation_loss_mse, validation_loss_mae = 0, 0, 0, 0
-    results = {
-        '2. MSE training normalized': np.inf,
-        '2. MAE training normalized': np.inf,
-        '3. MSE validation normalized': np.inf,
-        '3. MAE validation normalized': np.inf
-    }
+    results = dict()
     
+     # Training/validation loop
     for epoch in range(1, epochs + 1):
         
+        # Training
         model = model.train()
+        training_loss_mse_y_bid, training_loss_mae_y_bid, training_loss_mse_y_ask, training_loss_mae_y_ask = 0, 0, 0, 0
         
+        # Iterate over train dataset
         for x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month, y_bid, y_ask in data_loader_train:
-            
-            if target == 'y_bid':
-                y = y_bid
-            elif target == 'y_ask':
-                y = y_ask
-            else:
-                raise NotImplementedError("Target not correct")
                 
+            # Set the gradient to none before each iteration
             optimizer.zero_grad(set_to_none=True)
-                            
-            y_pred = model.forward(x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month)
-            criterion(y_pred, y).backward()
+                                        
+            # Forward pass
+            y_bid_pred, y_ask_pred = model.forward(x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month)
+            
+            # Compute losses
+            loss_mse_y_bid = criterion_mse_y_bid(y_bid_pred, y_bid)
+            loss_mae_y_bid = criterion_mae_y_bid(y_bid_pred, y_bid)
+            loss_mse_y_ask = criterion_mse_y_ask(y_ask_pred, y_ask)
+            loss_mae_y_ask = criterion_mae_y_ask(y_ask_pred, y_ask)
+            
+            training_loss_mse_y_bid += loss_mse_y_bid.item()
+            training_loss_mae_y_bid += loss_mae_y_bid.item()
+            training_loss_mse_y_ask += loss_mse_y_ask.item()
+            training_loss_mae_y_ask += loss_mae_y_ask.item()
+            
+            # Backward propagation on mse loss
+            if target == 'y_bid':
+                loss_mse_y_bid.backward()
+            elif target == 'y_ask':
+                loss_mse_y_ask.backward()
+            elif target == 'dual':
+                (loss_mse_y_bid + loss_mse_y_ask).backward()
+            else:
+                raise NotImplementedError("Target {} not implemented".format(target))
+            
+            # Update optimizer step
             optimizer.step()
             
-            training_loss_mse += criterion_mse(y_pred, y).item()
-            training_loss_mae += criterion_mae(y_pred, y).item()
+        # Divide training losses by dataset len
+        training_loss_mse_y_bid = training_loss_mse_y_bid / dataset_train.__len__()
+        training_loss_mae_y_bid = training_loss_mae_y_bid / dataset_train.__len__()
+        training_loss_mse_y_ask = training_loss_mse_y_ask / dataset_train.__len__()
+        training_loss_mae_y_ask = training_loss_mae_y_ask / dataset_train.__len__()
             
-        training_loss_mse = training_loss_mse / dataset_train.__len__()
-        training_loss_mae = training_loss_mae / dataset_train.__len__()
-            
+        # Validation
         model.eval()
-        validation_loss = 0
+        validation_loss_mse_y_bid, validation_loss_mae_y_bid, validation_loss_mse_y_ask, validation_loss_mae_y_ask = 0, 0, 0, 0
         
+        # Iterate over validation dataset
         for x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month, y_bid, y_ask in data_loader_validation:
-            
-            if target == 'y_bid':
-                y = y_bid
-            elif target == 'y_ask':
-                y = y_ask
-            else:
-                raise NotImplementedError("Target not correct")
                 
+            # Disable gradient during validation
             with torch.no_grad():
                 
-                y_pred = model.forward(x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month)
+                # Forward pass
+                y_bid_pred, y_ask_pred = model.forward(x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month)
                 
-                validation_loss_mse += criterion_mse(y_pred, y).item()
-                validation_loss_mae += criterion_mae(y_pred, y).item()
+                # Compute losses
+                loss_mse_y_bid = criterion_mse_y_bid(y_bid_pred, y_bid)
+                loss_mae_y_bid = criterion_mae_y_bid(y_bid_pred, y_bid)
+                loss_mse_y_ask = criterion_mse_y_ask(y_ask_pred, y_ask)
+                loss_mae_y_ask = criterion_mae_y_ask(y_ask_pred, y_ask)
+
+                validation_loss_mse_y_bid += loss_mse_y_bid.item()
+                validation_loss_mae_y_bid += loss_mae_y_bid.item()
+                validation_loss_mse_y_ask += loss_mse_y_ask.item()
+                validation_loss_mae_y_ask += loss_mae_y_ask.item()
                     
-        validation_loss_mse = validation_loss_mse / dataset_validation.__len__()
-        validation_loss_mae = validation_loss_mae / dataset_validation.__len__()
+        # Divide validation losses by dataset len
+        validation_loss_mse_y_bid = validation_loss_mse_y_bid / dataset_validation.__len__()
+        validation_loss_mae_y_bid = validation_loss_mae_y_bid / dataset_validation.__len__()
+        validation_loss_mse_y_ask = validation_loss_mse_y_ask / dataset_validation.__len__()
+        validation_loss_mae_y_ask = validation_loss_mae_y_ask / dataset_validation.__len__()
         
+        if target == 'y_bid':
+            validation_loss_mse = validation_loss_mse_y_bid
+        elif target == 'y_ask':
+            validation_loss_mse = validation_loss_mse_y_ask
+        elif target == 'dual':
+            validation_loss_mse = validation_loss_mse_y_bid + validation_loss_mse_y_ask
+        else:
+            raise NotImplementedError("Target {} not implemented".format(target))
+        
+        # Earlystopping management
         if validation_loss_mse < best_validation_loss_mse:
+            # If validation loss is better than the best validation loss achieved, update best validation loss
+            # and reset the counter then stock the losses values and best epoch
             best_validation_loss_mse = validation_loss_mse
             counter_no_amelioration = 0
             best_model_state_dict = deepcopy(model.state_dict())
             best_epoch = epoch
-            results = {
-                '2. MSE training normalized': training_loss_mse,
-                '2. MAE training normalized': training_loss_mae,
-                '3. MSE validation normalized': validation_loss_mse,
-                '3. MAE validation normalized': validation_loss_mae
-            }
+            if target == 'y_bid' or target == 'dual':
+                results['2. MSE training y_bid normalized'] = training_loss_mse_y_bid
+                results['2. MAE training y_bid normalized'] = training_loss_mae_y_bid
+                results['3. MSE validation y_bid normalized'] = validation_loss_mse_y_bid
+                results['3. MAE validation y_bid normalized'] = validation_loss_mae_y_bid
+            if target == 'y_ask' or target == 'dual':
+                results['2. MSE training y_ask normalized'] = training_loss_mse_y_ask
+                results['2. MAE training y_ask normalized'] = training_loss_mae_y_ask
+                results['3. MSE validation y_ask normalized'] = validation_loss_mse_y_ask
+                results['3. MAE validation y_ask normalized'] = validation_loss_mae_y_ask
         else:
+            # If not, increase the counter. If the counter is equal to the limit, stop training/validation loop
             counter_no_amelioration += 1
             if counter_no_amelioration == patience:
                 model.load_state_dict(best_model_state_dict)
                 break
-                
+    
+    # Test
     model.eval()
+    list_y_bid, list_y_ask = [], []
+    list_y_bid_pred, list_y_ask_pred = [], []
     
-    test_loss_mse = 0
-    test_loss_mae = 0
-    test_loss_absolute_mse = 0
-    test_loss_absolute_mae = 0
-    error_absolute_max = 0
-    error_relative_max = 0
-    
-    array_y_pred = np.array([])
-    array_y = np.array([])
-    array_other_target = np.array([])
-    
-    if target == 'y_bid':
-        scaler_target = scaler_y_bid
-        scaler_other_target = scaler_y_ask
-    elif target == 'y_ask':
-        scaler_target = scaler_y_ask
-        scaler_other_target = scaler_y_bid
-    else:
-        raise NotImplementedError("Target not correct")
-    
+    # Iterate over test dataset
     for x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month, y_bid, y_ask in data_loader_test:
-            
-        if target == 'y_bid':
-            y = y_bid
-            array_other_target = np.concatenate([array_other_target, scaler_other_target.inverse_transform(y_ask.detach().cpu().unsqueeze(dim=1).numpy()).squeeze()])
-        elif target == 'y_ask':
-            y = y_ask
-            array_other_target = np.concatenate([array_other_target, scaler_other_target.inverse_transform(y_bid.detach().cpu().unsqueeze(dim=1).numpy()).squeeze()])
-        else:
-            raise NotImplementedError("Target not correct")
                 
+        # Disable gradient during test
         with torch.no_grad():
             
-            y_pred = model.forward(x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month)
+            # Forward pass
+            y_bid_pred, y_ask_pred = model.forward(x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month)
             
-            test_loss_mse += criterion_mse(y_pred, y).item()
-            test_loss_mae += criterion_mae(y_pred, y).item()
-                        
-            y_pred = scaler_target.inverse_transform(y_pred.detach().cpu().unsqueeze(dim=1).numpy()).squeeze()
-            y = scaler_target.inverse_transform(y.detach().cpu().unsqueeze(dim=1).numpy()).squeeze()
+            # Stock y_bid, y_ask, y_bid_pred and y_ask_pred
+            list_y_bid.append(y_bid.detach().cpu().numpy())
+            list_y_ask.append(y_ask.detach().cpu().numpy())
+            list_y_bid_pred.append(y_bid_pred.detach().cpu().numpy())
+            list_y_ask_pred.append(y_ask_pred.detach().cpu().numpy())
             
-            array_y_pred = np.concatenate([array_y_pred, y_pred])
-            array_y = np.concatenate([array_y, y])
-            
-    results['4. MSE test normalized'] = test_loss_mse / dataset_test.__len__()
-    results['4. MAE test normalized'] = test_loss_mae / dataset_test.__len__()
-    results['5. MSE test absolute'] = mean_squared_error(array_y, array_y_pred)
-    results['5. MAE test absolute'] = mean_absolute_error(array_y, array_y_pred)
-    results['6. Error absolute max'] = np.max(np.abs(array_y - array_y_pred))
-    results['6. Error relative max'] = np.max(np.abs((array_y - array_y_pred) / array_y))
+    # Concatenate arrays
+    array_y_bid = np.concatenate(list_y_bid)
+    array_y_ask = np.concatenate(list_y_ask)
+    array_y_bid_pred = np.concatenate(list_y_bid_pred)
+    array_y_ask_pred = np.concatenate(list_y_ask_pred)
     
-    currency = 'EUR'
-    sold = 1
-    
-    if target == 'y_bid':
-        y_bid_t_1 = array_y_pred
-        y_ask_t_1 = array_other_target
-    elif target == 'y_ask':
-        y_bid_t_1 = array_other_target
-        y_ask_t_1 = array_y_pred
-    else:
-        raise NotImplementedError("Target not correct")
-        
-    y_bid_t_0 = scaler_y_bid.inverse_transform(dataset_test.X_now[:, 6].cpu().unsqueeze(dim=1).numpy()).squeeze()
-    y_ask_t_0 = scaler_y_ask.inverse_transform(dataset_test.X_now[:, 2].cpu().unsqueeze(dim=1).numpy()).squeeze()
-        
-    for i in range(y_bid_t_0.shape[0]):
-        
-        if currency == "EUR":
-            
-            if y_bid_t_0[i] > y_ask_t_1[i]:
-                
-                currency = "CHF"
-                sold = sold * y_bid_t_0[i]
+    # Unscale values
+    array_y_bid_unscaled = scaler_y_bid.inverse_transform(np.expand_dims(array_y_bid, axis=1)).squeeze()
+    array_y_ask_unscaled = scaler_y_ask.inverse_transform(np.expand_dims(array_y_ask, axis=1)).squeeze()
+    array_y_bid_pred_unscaled = scaler_y_bid.inverse_transform(np.expand_dims(array_y_bid_pred, axis=1)).squeeze()
+    array_y_ask_pred_unscaled = scaler_y_ask.inverse_transform(np.expand_dims(array_y_ask_pred, axis=1)).squeeze()
 
-        else:
-            
-            if y_ask_t_0[i] > y_bid_t_1[i]:
-                
-                currency = "EUR"
-                sold = sold / y_ask_t_0[i]
-
-    if currency == "CHF":
+    # Compute losses and other metrics
+    if target == 'y_bid' or target == 'dual':
+        results['4. MSE test y_bid normalized'] = mean_squared_error(array_y_bid, array_y_bid_pred)
+        results['4. MAE test y_bid normalized'] = mean_absolute_error(array_y_bid, array_y_bid_pred)
+        results['5. MSE test y_bid absolute'] = mean_squared_error(array_y_bid_unscaled, array_y_bid_pred_unscaled)
+        results['5. MAE test y_bid absolute'] = mean_absolute_error(array_y_bid_unscaled, array_y_bid_pred_unscaled)
+        results['6. Error max absolute y_bid'] = np.max(np.abs(array_y_bid_unscaled - array_y_bid_pred_unscaled))
+        results['6. Error max relative y_bid'] = np.max(np.abs((array_y_bid_unscaled - array_y_bid_pred_unscaled) / array_y_bid_unscaled))
+    if target == 'y_ask' or target == 'dual':
+        results['4. MSE test y_ask normalized'] = mean_squared_error(array_y_ask, array_y_ask_pred)
+        results['4. MAE test y_ask normalized'] = mean_absolute_error(array_y_ask, array_y_ask_pred)
+        results['5. MSE test y_ask absolute'] = mean_squared_error(array_y_ask_unscaled, array_y_ask_pred_unscaled)
+        results['5. MAE test y_ask absolute'] = mean_absolute_error(array_y_ask_unscaled, array_y_ask_pred_unscaled)
+        results['6. Error max absolute y_ask'] = np.max(np.abs(array_y_ask_unscaled - array_y_ask_pred_unscaled))
+        results['6. Error max relative y_ask'] = np.max(np.abs((array_y_ask_unscaled - array_y_ask_pred_unscaled) / array_y_ask_unscaled))
         
-        sold = sold / y_ask_t_0[i]
-                
-    results['7. Financial performance'] = sold - 1
+    # Return model and datasets to CPU and empty cache
+    model.cpu()
+    dataset_train.cpu()
+    dataset_validation.cpu()
+    dataset_test.cpu()
+    gc.collect()
+    torch.cuda.empty_cache()
         
     return model, results, best_epoch

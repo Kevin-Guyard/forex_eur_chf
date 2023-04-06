@@ -49,7 +49,7 @@ class MLP(nn.Module):
         layers_size = [embedding_dims['year'] + embedding_dims['month'] + embedding_dims['day'] + embedding_dims['hour'] + embedding_dims['weekday'] + (self.n_previous_hour_values + self.n_previous_day_values + self.n_previous_week_values + self.n_previous_month_values + 1) * n_features] + d_hidden_layers
         
         if hidden_layers_structure == "Batchnorm-Activation":
-            
+                        
             layers = [
                 nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -60,10 +60,10 @@ class MLP(nn.Module):
                     layers_size[:-1],
                     layers_size[1:]
                 )
-            ] + [nn.Linear(layers_size[-1], 1)]
+            ]
             
         elif hidden_layers_structure == "Activation-Batchnorm":
-            
+                        
             layers = [
                 nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -74,10 +74,10 @@ class MLP(nn.Module):
                     layers_size[:-1],
                     layers_size[1:]
                 )
-            ] + [nn.Linear(layers_size[-1], 1)]
+            ]
             
         elif hidden_layers_structure == "Activation-Dropout":
-            
+                        
             layers = [
                 nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -88,10 +88,10 @@ class MLP(nn.Module):
                     layers_size[:-1],
                     layers_size[1:]
                 )
-            ] + [nn.Linear(layers_size[-1], 1)]
+            ]
             
         elif hidden_layers_structure == "Dropout-Activation":
-            
+                        
             layers = [
                 nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -102,10 +102,10 @@ class MLP(nn.Module):
                     layers_size[:-1],
                     layers_size[1:]
                 )
-            ] + [nn.Linear(layers_size[-1], 1)]
+            ]
             
         elif hidden_layers_structure == "Batchnorm-Activation-Dropout":
-                
+                            
             layers = [
                 nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -117,10 +117,10 @@ class MLP(nn.Module):
                     layers_size[:-1],
                     layers_size[1:]
                 )
-            ] + [nn.Linear(layers_size[-1], 1)]
+            ]
             
         elif hidden_layers_structure == "Dropout-Activation-Batchnorm":
-                
+                            
             layers = [
                 nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -132,10 +132,10 @@ class MLP(nn.Module):
                     layers_size[:-1],
                     layers_size[1:]
                 )
-            ] + [nn.Linear(layers_size[-1], 1)]
+            ]
             
         elif hidden_layers_structure == "Activation-Batchnorm-Dropout":
-            
+                        
             layers = [
                 nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -147,10 +147,10 @@ class MLP(nn.Module):
                     layers_size[:-1],
                     layers_size[1:]
                 )
-            ] + [nn.Linear(layers_size[-1], 1)]
+            ]
             
-        elif hidden_layers_structure == "Activation-Droupout-Batchnorm":
-            
+        elif hidden_layers_structure == "Activation-Dropout-Batchnorm":
+                        
             layers = [
                 nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -162,10 +162,10 @@ class MLP(nn.Module):
                     layers_size[:-1],
                     layers_size[1:]
                 )
-            ] + [nn.Linear(layers_size[-1], 1)]
+            ]
             
         elif hidden_layers_structure == "Batchnorm-Dropout-Activation":
-            
+                        
             layers = [
                 nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -177,10 +177,10 @@ class MLP(nn.Module):
                     layers_size[:-1],
                     layers_size[1:]
                 )
-            ] + [nn.Linear(layers_size[-1], 1)]
+            ]
             
-        elif hidden_layers_structure == "Droupout-Batchnorm-Activation":
-            
+        elif hidden_layers_structure == "Dropout-Batchnorm-Activation":
+                        
             layers = [
                 nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -192,8 +192,13 @@ class MLP(nn.Module):
                     layers_size[:-1],
                     layers_size[1:]
                 )
-            ] + [nn.Linear(layers_size[-1], 1)]
+            ]
             
+        else:
+            layers = []
+            
+        layers += [nn.Linear(layers_size[-1], 2)]
+        
         self.mlp = nn.Sequential(*layers)
         
     def forward(self, x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month):
@@ -207,6 +212,9 @@ class MLP(nn.Module):
             torch.flatten(x_previous_month[:, 0:self.n_previous_month_values, :], start_dim=1, end_dim=-1)
         ], dim=1)
                         
-        x = self.mlp(x)
+        y = self.mlp(x)
         
-        return torch.flatten(x)
+        y_bid = torch.flatten(y[:, 0])
+        y_ask = torch.flatten(y[:, 1])
+        
+        return y_bid, y_ask
