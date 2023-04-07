@@ -8,7 +8,7 @@ from copy import deepcopy
 import gc
 
 
-def evaluate_for_tuning(model, dataset_train, dataset_validation, target, optimizer, batch_size_train, batch_size_validation, learning_rate, weight_decay, patience, epochs, flag_transfer_cpu_gpu):
+def evaluate_for_tuning(model, dataset_train, dataset_validation, target, optimizer, batch_size_train, batch_size_validation, learning_rate, weight_decay, patience, epochs):
     
     # Set random seed
     torch.manual_seed(42)
@@ -16,11 +16,13 @@ def evaluate_for_tuning(model, dataset_train, dataset_validation, target, optimi
     np.random.seed(42)
     
     # Transfer model and datasets to GPU
-    if flag_transfer_cpu_gpu == True:
+    model.cuda()
+    if dataset_train.device == "CPU" or dataset_validation.device == "CPU":
         dataset_train.cuda()
         dataset_validation.cuda()
-        
-    model.cuda()
+        flag_transfer_cpu_gpu = True
+    else:
+        flag_transfer_cpu_gpu = False
 
     # Loss functions
     criterion_mse_y_bid = nn.MSELoss(reduction='sum')

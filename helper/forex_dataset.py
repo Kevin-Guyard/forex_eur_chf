@@ -21,6 +21,7 @@ class ForexDataset(Dataset):
         self.n_previous_week_values = n_previous_week_values
         self.n_previous_month_values = n_previous_month_values
         self.n_features = n_features
+        self.device = "CPU"
         
     def __len__(self):
         
@@ -68,6 +69,9 @@ class ForexDataset(Dataset):
         self.X_previous_month = self.X_previous_month.cuda()
         self.y_bid = self.y_bid.cuda()
         self.y_ask = self.y_ask.cuda()
+        self.device = "CUDA"
+        
+        return self
         
     def cpu(self):
         
@@ -79,3 +83,6 @@ class ForexDataset(Dataset):
         self.X_previous_month = self.X_previous_month.cpu()
         self.y_bid = self.y_bid.cpu()
         self.y_ask = self.y_ask.cpu()
+        self.device = "CPU"
+        
+        return self

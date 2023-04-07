@@ -29,14 +29,10 @@ def main():
     for i in range(4):
         
         with open(os.path.join(REPOSITORY_DATA_PREPROCESSED, 'dataset_tuning_train_' + str(i) + '.pt'), 'rb') as file:
-            dataset_tuning_trains.append(torch.load(file, pickle_module=pickle))
+            dataset_tuning_trains.append(torch.load(file, pickle_module=pickle).cuda())
             
         with open(os.path.join(REPOSITORY_DATA_PREPROCESSED, 'dataset_tuning_validation_' + str(i) + '.pt'), 'rb') as file:
-            dataset_tuning_validations.append(torch.load(file, pickle_module=pickle))
-            
-    for dataset_train, dataset_validation in zip(dataset_tuning_trains, dataset_tuning_validations):
-        dataset_train.cuda()
-        dataset_validation.cuda()
+            dataset_tuning_validations.append(torch.load(file, pickle_module=pickle).cuda())
             
     if os.path.exists(os.path.join(REPOSITORY_STUDIES, target, 'study ' + target + ' ' + model_name + '.pkl')):
         with open(os.path.join(REPOSITORY_STUDIES, target, 'study ' + target + ' ' + model_name + '.pkl'), 'rb') as file:
@@ -54,8 +50,7 @@ def main():
                 model_name, 
                 target, 
                 patience=TUNING_PATIENCE, 
-                epochs=TUNING_EPOCHS,
-                flag_transfer_cpu_gpu=False),
+                epochs=TUNING_EPOCHS),
             n_trials=1, 
             timeout=None, 
             n_jobs=1)
