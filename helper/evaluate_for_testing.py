@@ -9,6 +9,28 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 import gc
 
 
+def evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1):
+    
+    currency = 'EUR'
+    sold = 1.0
+              
+    for y_bid_t_0, y_bid_t_1, y_ask_t_0, y_ask_t_1 in zip(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1):
+            
+        if currency == 'EUR':
+            if y_bid_t_0 > y_ask_t_1:
+                currency = 'CHF'
+                sold = sold * y_bid_t_0
+        else:
+            if y_ask_t_0 < y_bid_t_1:
+                currency = 'EUR'
+                sold = sold / y_ask_t_0
+                    
+    if currency == 'CHF':
+        sold = sold / y_ask_t_0
+        
+    return sold - 1
+
+
 def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test, scaler_y_bid, scaler_y_ask, target, optimizer, batch_size_train, batch_size_validation, batch_size_test, learning_rate, weight_decay, patience, epochs):
     
     # Set random seed
@@ -206,6 +228,26 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
         results['5. MAE test y_ask absolute'] = mean_absolute_error(array_y_ask_unscaled, array_y_ask_pred_unscaled)
         results['6. Error max absolute y_ask'] = np.max(np.abs(array_y_ask_unscaled - array_y_ask_pred_unscaled))
         results['6. Error max relative y_ask'] = np.max(np.abs((array_y_ask_unscaled - array_y_ask_pred_unscaled) / array_y_ask_unscaled))
+        
+    # Compute financial performance metric
+    if target == 'y_bid' or target == 'dual':
+        array_y_bid_t_0 = array_y_bid_unscaled[:-1]
+        array_y_bid_t_1 = array_y_bid_pred_unscaled[1:]
+        array_y_ask_t_0 = array_y_ask_unscaled[:-1]
+        array_y_ask_t_1 = array_y_ask_unscaled[1:]        
+        results['7. Financial performance y_bid'] = evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1)
+    if target == 'y_ask' or target == 'dual':
+        array_y_bid_t_0 = array_y_bid_unscaled[:-1]
+        array_y_bid_t_1 = array_y_bid_unscaled[1:]
+        array_y_ask_t_0 = array_y_ask_unscaled[:-1]
+        array_y_ask_t_1 = array_y_ask_pred_unscaled[1:] 
+        results['7. Financial performance y_ask'] = evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1)
+    if target == 'dual':
+        array_y_bid_t_0 = array_y_bid_unscaled[:-1]
+        array_y_bid_t_1 = array_y_bid_pred_unscaled[1:]
+        array_y_ask_t_0 = array_y_ask_unscaled[:-1]
+        array_y_ask_t_1 = array_y_ask_pred_unscaled[1:] 
+        results['7. Financial performance dual'] = evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1)
         
     # Return model and datasets to CPU and empty cache
     model.cpu()
