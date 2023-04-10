@@ -4,7 +4,7 @@
 #SBATCH --output mlp_3_month_memory_dual-out.o%j
 #SBATCH --partition shared-gpu
 #SBATCH --gpus=1
-#SBATCH --time 12:00:00
+#SBATCH --time 06:00:00
 #SBATCH --mem=10000
 
 module load GCCcore/11.2.0 Python/3.9.6
