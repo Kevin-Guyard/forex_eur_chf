@@ -27,7 +27,7 @@ def get_model(model_name, **params):
                 'week': params.get('n_previous_week_values', 0),
                 'month': params.get('n_previous_month_values', 0)
             },
-            d_hidden_layers=[params['d_hidden_layer_' + str(i)] for i in range(int(model_name[3]))],
+            d_hidden_layers=[int(2 ** params['d_hidden_layer_' + str(i)]) for i in range(int(model_name[3]))],
             hidden_layers_structure=params.get("hidden_layers_structure", None)
         )
     
