@@ -1,7 +1,7 @@
 #!/bin/sh
-#SBATCH --job-name mlp_1_day_memory_y_ask
-#SBATCH --error mlp_1_day_memory_y_ask-error.e%j
-#SBATCH --output mlp_1_day_memory_y_ask-out.o%j
+#SBATCH --job-name mlp_3_hour_memory
+#SBATCH --error mlp_3_hour_memory-error.e%j
+#SBATCH --output mlp_3_hour_memory-out.o%j
 #SBATCH --partition shared-gpu
 #SBATCH --gpus=1
 #SBATCH --time 06:00:00
@@ -15,4 +15,4 @@ pip install numpy==1.21.5
 pip install pandas==1.4.4
 pip install optuna==3.1.0
 
-python main_tuning.py MLP1DayMemory y_ask
+python main_tuning.py MLP3HourMemory

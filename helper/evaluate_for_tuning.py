@@ -8,7 +8,7 @@ from copy import deepcopy
 import gc
 
 
-def evaluate_for_tuning(model, dataset_train, dataset_validation, target, optimizer, batch_size_train, batch_size_validation, learning_rate, weight_decay, patience, epochs):
+def evaluate_for_tuning(model, dataset_train, dataset_validation, optimizer, batch_size_train, batch_size_validation, learning_rate, weight_decay, patience, epochs):
     
     # Set random seed
     torch.manual_seed(42)
@@ -60,14 +60,7 @@ def evaluate_for_tuning(model, dataset_train, dataset_validation, target, optimi
             y_bid_pred, y_ask_pred = model.forward(x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month)
             
             # Compute loss
-            if target == 'y_bid':
-                loss = criterion_mse_y_bid(y_bid_pred, y_bid)
-            elif target == 'y_ask':
-                loss = criterion_mse_y_ask(y_ask_pred, y_ask)
-            elif target == 'dual':
-                loss = criterion_mse_y_bid(y_bid_pred, y_bid) + criterion_mse_y_ask(y_ask_pred, y_ask)
-            else:
-                raise NotImplementedError("Target {} not implemented".format(target))
+            loss = criterion_mse_y_bid(y_bid_pred, y_bid) + criterion_mse_y_ask(y_ask_pred, y_ask)
             
             # Backward propagation
             loss.backward()
@@ -89,15 +82,7 @@ def evaluate_for_tuning(model, dataset_train, dataset_validation, target, optimi
                 y_bid_pred, y_ask_pred = model.forward(x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month)
                 
                 # Compute loss
-                if target == 'y_bid':
-                    loss = criterion_mse_y_bid(y_bid_pred, y_bid)
-                elif target == 'y_ask':
-                    loss = criterion_mse_y_ask(y_ask_pred, y_ask)
-                elif target == 'dual':
-                    loss = criterion_mse_y_bid(y_bid_pred, y_bid) + criterion_mse_y_ask(y_ask_pred, y_ask)
-                else:
-                    raise NotImplementedError("Target {} not implemented".format(target))
-                
+                loss = criterion_mse_y_bid(y_bid_pred, y_bid) + criterion_mse_y_ask(y_ask_pred, y_ask)
                 validation_loss += loss.item()
                     
         # Divide validation loss by dataset len

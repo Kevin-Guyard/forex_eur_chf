@@ -31,7 +31,7 @@ def evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_
     return sold - 1
 
 
-def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test, scaler_y_bid, scaler_y_ask, target, optimizer, batch_size_train, batch_size_validation, batch_size_test, learning_rate, weight_decay, patience, epochs):
+def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test, scaler_y_bid, scaler_y_ask, optimizer, batch_size_train, batch_size_validation, batch_size_test, learning_rate, weight_decay, patience, epochs):
     
     # Set random seed
     torch.manual_seed(42)
@@ -99,14 +99,7 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
             training_loss_mae_y_ask += loss_mae_y_ask.item()
             
             # Backward propagation on mse loss
-            if target == 'y_bid':
-                loss_mse_y_bid.backward()
-            elif target == 'y_ask':
-                loss_mse_y_ask.backward()
-            elif target == 'dual':
-                (loss_mse_y_bid + loss_mse_y_ask).backward()
-            else:
-                raise NotImplementedError("Target {} not implemented".format(target))
+            (loss_mse_y_bid + loss_mse_y_ask).backward()
             
             # Update optimizer step
             optimizer.step()
@@ -147,14 +140,7 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
         validation_loss_mse_y_ask = validation_loss_mse_y_ask / dataset_validation.__len__()
         validation_loss_mae_y_ask = validation_loss_mae_y_ask / dataset_validation.__len__()
         
-        if target == 'y_bid':
-            validation_loss_mse = validation_loss_mse_y_bid
-        elif target == 'y_ask':
-            validation_loss_mse = validation_loss_mse_y_ask
-        elif target == 'dual':
-            validation_loss_mse = validation_loss_mse_y_bid + validation_loss_mse_y_ask
-        else:
-            raise NotImplementedError("Target {} not implemented".format(target))
+        validation_loss_mse = validation_loss_mse_y_bid + validation_loss_mse_y_ask
         
         # Earlystopping management
         if validation_loss_mse < best_validation_loss_mse:
@@ -164,16 +150,14 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
             counter_no_amelioration = 0
             best_model_state_dict = deepcopy(model.state_dict())
             best_epoch = epoch
-            if target == 'y_bid' or target == 'dual':
-                results['2. MSE training y_bid normalized'] = training_loss_mse_y_bid
-                results['2. MAE training y_bid normalized'] = training_loss_mae_y_bid
-                results['3. MSE validation y_bid normalized'] = validation_loss_mse_y_bid
-                results['3. MAE validation y_bid normalized'] = validation_loss_mae_y_bid
-            if target == 'y_ask' or target == 'dual':
-                results['2. MSE training y_ask normalized'] = training_loss_mse_y_ask
-                results['2. MAE training y_ask normalized'] = training_loss_mae_y_ask
-                results['3. MSE validation y_ask normalized'] = validation_loss_mse_y_ask
-                results['3. MAE validation y_ask normalized'] = validation_loss_mae_y_ask
+            results['2. MSE training y_bid normalized'] = training_loss_mse_y_bid
+            results['2. MAE training y_bid normalized'] = training_loss_mae_y_bid
+            results['3. MSE validation y_bid normalized'] = validation_loss_mse_y_bid
+            results['3. MAE validation y_bid normalized'] = validation_loss_mae_y_bid
+            results['2. MSE training y_ask normalized'] = training_loss_mse_y_ask
+            results['2. MAE training y_ask normalized'] = training_loss_mae_y_ask
+            results['3. MSE validation y_ask normalized'] = validation_loss_mse_y_ask
+            results['3. MAE validation y_ask normalized'] = validation_loss_mae_y_ask
         else:
             # If not, increase the counter. If the counter is equal to the limit, stop training/validation loop
             counter_no_amelioration += 1
@@ -214,40 +198,38 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
     array_y_ask_pred_unscaled = scaler_y_ask.inverse_transform(np.expand_dims(array_y_ask_pred, axis=1)).squeeze()
 
     # Compute losses and other metrics
-    if target == 'y_bid' or target == 'dual':
-        results['4. MSE test y_bid normalized'] = mean_squared_error(array_y_bid, array_y_bid_pred)
-        results['4. MAE test y_bid normalized'] = mean_absolute_error(array_y_bid, array_y_bid_pred)
-        results['5. MSE test y_bid absolute'] = mean_squared_error(array_y_bid_unscaled, array_y_bid_pred_unscaled)
-        results['5. MAE test y_bid absolute'] = mean_absolute_error(array_y_bid_unscaled, array_y_bid_pred_unscaled)
-        results['6. Error max absolute y_bid'] = np.max(np.abs(array_y_bid_unscaled - array_y_bid_pred_unscaled))
-        results['6. Error max relative y_bid'] = np.max(np.abs((array_y_bid_unscaled - array_y_bid_pred_unscaled) / array_y_bid_unscaled))
-    if target == 'y_ask' or target == 'dual':
-        results['4. MSE test y_ask normalized'] = mean_squared_error(array_y_ask, array_y_ask_pred)
-        results['4. MAE test y_ask normalized'] = mean_absolute_error(array_y_ask, array_y_ask_pred)
-        results['5. MSE test y_ask absolute'] = mean_squared_error(array_y_ask_unscaled, array_y_ask_pred_unscaled)
-        results['5. MAE test y_ask absolute'] = mean_absolute_error(array_y_ask_unscaled, array_y_ask_pred_unscaled)
-        results['6. Error max absolute y_ask'] = np.max(np.abs(array_y_ask_unscaled - array_y_ask_pred_unscaled))
-        results['6. Error max relative y_ask'] = np.max(np.abs((array_y_ask_unscaled - array_y_ask_pred_unscaled) / array_y_ask_unscaled))
+    results['4. MSE test y_bid normalized'] = mean_squared_error(array_y_bid, array_y_bid_pred)
+    results['4. MAE test y_bid normalized'] = mean_absolute_error(array_y_bid, array_y_bid_pred)
+    results['5. MSE test y_bid absolute'] = mean_squared_error(array_y_bid_unscaled, array_y_bid_pred_unscaled)
+    results['5. MAE test y_bid absolute'] = mean_absolute_error(array_y_bid_unscaled, array_y_bid_pred_unscaled)
+    results['6. Error max absolute y_bid'] = np.max(np.abs(array_y_bid_unscaled - array_y_bid_pred_unscaled))
+    results['6. Error max relative y_bid'] = np.max(np.abs((array_y_bid_unscaled - array_y_bid_pred_unscaled) / array_y_bid_unscaled))
+    
+    results['4. MSE test y_ask normalized'] = mean_squared_error(array_y_ask, array_y_ask_pred)
+    results['4. MAE test y_ask normalized'] = mean_absolute_error(array_y_ask, array_y_ask_pred)
+    results['5. MSE test y_ask absolute'] = mean_squared_error(array_y_ask_unscaled, array_y_ask_pred_unscaled)
+    results['5. MAE test y_ask absolute'] = mean_absolute_error(array_y_ask_unscaled, array_y_ask_pred_unscaled)
+    results['6. Error max absolute y_ask'] = np.max(np.abs(array_y_ask_unscaled - array_y_ask_pred_unscaled))
+    results['6. Error max relative y_ask'] = np.max(np.abs((array_y_ask_unscaled - array_y_ask_pred_unscaled) / array_y_ask_unscaled))
         
     # Compute financial performance metric
-    if target == 'y_bid' or target == 'dual':
-        array_y_bid_t_0 = array_y_bid_unscaled[:-1]
-        array_y_bid_t_1 = array_y_bid_pred_unscaled[1:]
-        array_y_ask_t_0 = array_y_ask_unscaled[:-1]
-        array_y_ask_t_1 = array_y_ask_unscaled[1:]        
-        results['7. Financial performance y_bid'] = evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1)
-    if target == 'y_ask' or target == 'dual':
-        array_y_bid_t_0 = array_y_bid_unscaled[:-1]
-        array_y_bid_t_1 = array_y_bid_unscaled[1:]
-        array_y_ask_t_0 = array_y_ask_unscaled[:-1]
-        array_y_ask_t_1 = array_y_ask_pred_unscaled[1:] 
-        results['7. Financial performance y_ask'] = evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1)
-    if target == 'dual':
-        array_y_bid_t_0 = array_y_bid_unscaled[:-1]
-        array_y_bid_t_1 = array_y_bid_pred_unscaled[1:]
-        array_y_ask_t_0 = array_y_ask_unscaled[:-1]
-        array_y_ask_t_1 = array_y_ask_pred_unscaled[1:] 
-        results['7. Financial performance dual'] = evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1)
+    array_y_bid_t_0 = array_y_bid_unscaled[:-1]
+    array_y_bid_t_1 = array_y_bid_pred_unscaled[1:]
+    array_y_ask_t_0 = array_y_ask_unscaled[:-1]
+    array_y_ask_t_1 = array_y_ask_unscaled[1:]        
+    results['7. Financial performance y_bid'] = evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1)
+        
+    array_y_bid_t_0 = array_y_bid_unscaled[:-1]
+    array_y_bid_t_1 = array_y_bid_unscaled[1:]
+    array_y_ask_t_0 = array_y_ask_unscaled[:-1]
+    array_y_ask_t_1 = array_y_ask_pred_unscaled[1:] 
+    results['7. Financial performance y_ask'] = evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1)
+
+    array_y_bid_t_0 = array_y_bid_unscaled[:-1]
+    array_y_bid_t_1 = array_y_bid_pred_unscaled[1:]
+    array_y_ask_t_0 = array_y_ask_unscaled[:-1]
+    array_y_ask_t_1 = array_y_ask_pred_unscaled[1:] 
+    results['7. Financial performance'] = evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_t_0, array_y_ask_t_1)
         
     # Return model and datasets to CPU and empty cache
     model.cpu()
