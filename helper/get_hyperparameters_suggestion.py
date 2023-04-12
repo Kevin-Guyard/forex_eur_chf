@@ -1,58 +1,21 @@
+from hyperparameters_suggestion import get_hyperparameters_suggestion_mlp, get_hyperparameters_suggestion_transformer_mlp
 
 
 def get_hyperparameters_suggestion(model_name, trial):
-
-    trial.suggest_int("batch_size_train", low=4, high=9)
-    trial.suggest_categorical("optimizer", ["Adam", "AdamW"])
-    trial.suggest_float("learning_rate", 1e-5, 1e0, log=True)
-    trial.suggest_float("weight_decay", 1e-5, 1e0, log=True)
+    
+    if 'HourMemory' in model_name:
+        type_memory = 'hour'
+    elif 'DayMemory' in model_name:
+        type_memory = 'day'
+    elif 'WeekMemory' in model_name:
+        type_memory = 'week'
+    elif 'MonthMemory' in model_name:
+        type_memory = 'month'
     
     if model_name[0:3] == "MLP":
-        
-        trial.suggest_float("dropout", low=0, high=0.9)
-        trial.suggest_int("embedding_dim_year", low=2, high=6)
-        trial.suggest_int("embedding_dim_month", low=2, high=7)
-        trial.suggest_int("embedding_dim_day", low=4, high=18)
-        trial.suggest_int("embedding_dim_hour", low=4, high=15)
-        trial.suggest_int("embedding_dim_weekday", low=2, high=4)
-        
-        if model_name[4:] == "HourMemory":
-        
-            trial.suggest_int("n_previous_hour_values", low=1, high=720)
-            
-        elif model_name[4:] == "DayMemory":
-    
-            trial.suggest_int("n_previous_hour_values", low=0, high=720)
-            trial.suggest_int("n_previous_day_values", low=1, high=90)
-            
-        elif model_name[4:] == "WeekMemory":
-    
-            trial.suggest_int("n_previous_hour_values", low=0, high=720)
-            trial.suggest_int("n_previous_day_values", low=0, high=90)
-            trial.suggest_int("n_previous_week_values", low=1, high=50)
-            
-        elif model_name[4:] == "MonthMemory":
-    
-            trial.suggest_int("n_previous_hour_values", low=0, high=720)
-            trial.suggest_int("n_previous_day_values", low=0, high=90)
-            trial.suggest_int("n_previous_week_values", low=0, high=50)
-            trial.suggest_int("n_previous_month_values", low=1, high=36)
-            
-        else:
-            
-            raise NotImplementedError("Get hyperparameters suggestion not implemented for {}".format(model_name))
-            
-        for i in range(int(model_name[3])):
-            trial.suggest_int("d_hidden_layer_" + str(i), low=2, high=13)
-            
-        if int(model_name[3]) > 0:
-            trial.suggest_categorical("hidden_layers_structure", [
-                "Activation-Dropout",
-                "Dropout-Activation",
-                "Batchnorm-Activation",
-                "Activation-Batchnorm"
-            ])
-
+        get_hyperparameters_suggestion_mlp(trial, type_memory, int(model_name[3]))
+    elif model_name[0:14] == "TransformerMLP":
+        get_hyperparameters_suggestion_transformer_mlp(trial, type_memory, int(model_name[14]))
     else:
         raise NotImplementedError("Get hyperparameters suggestion not implemented for {}".format(model_name))
         

@@ -20,7 +20,7 @@ def cross_evaluate_for_tuning(model, dataset_trains, dataset_validations, optimi
                 dataset_validation, 
                 optimizer, 
                 batch_size_train, 
-                batch_size_validation=dataset_validation.__len__(), 
+                batch_size_validation=int(dataset_validation.__len__()/100)+1, 
                 learning_rate=learning_rate, 
                 weight_decay=weight_decay, 
                 patience=patience, 
