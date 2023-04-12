@@ -2,7 +2,7 @@ from helper.get_hyperparameters_suggestion import get_hyperparameters_suggestion
 from helper.get_model import get_model 
 from helper.cross_evaluate_for_tuning import cross_evaluate_for_tuning
 
-def objective(trial, dataset_tuning_trains, dataset_tuning_validations, model_name, patience, epochs):
+def objective(trial, dataset_tuning_trains, dataset_tuning_validations, model_name, patience, epochs, memory_care=False):
     
     get_hyperparameters_suggestion(model_name, trial)
     
@@ -17,7 +17,8 @@ def objective(trial, dataset_tuning_trains, dataset_tuning_validations, model_na
         learning_rate=trial.params['learning_rate'], 
         weight_decay=trial.params['weight_decay'], 
         patience=patience, 
-        epochs=epochs)
+        epochs=epochs,
+        memory_care=memory_care)
     
     del model
     

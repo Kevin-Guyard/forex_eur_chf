@@ -31,7 +31,7 @@ def evaluate_financial_performace(array_y_bid_t_0, array_y_bid_t_1, array_y_ask_
     return sold - 1
 
 
-def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test, scaler_y_bid, scaler_y_ask, optimizer, batch_size_train, batch_size_validation, batch_size_test, learning_rate, weight_decay, patience, epochs):
+def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test, scaler_y_bid, scaler_y_ask, optimizer, batch_size_train, batch_size_validation, batch_size_test, learning_rate, weight_decay, patience, epochs, memory_care=False):
     
     # Set random seed
     torch.manual_seed(42)
@@ -40,9 +40,10 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
     
     # Transfer model and datasets to GPU
     model.cuda()
-    dataset_train.cuda()
-    dataset_validation.cuda()
-    dataset_test.cuda()
+    if memory_care == False:
+        dataset_train.cuda()
+        dataset_validation.cuda()
+        dataset_test.cuda()
     
     # Loss functions
     criterion_mse_y_bid = nn.MSELoss(reduction='sum')
@@ -80,6 +81,9 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
         
         # Iterate over train dataset
         for x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month, y_bid, y_ask in data_loader_train:
+            
+            if memory_care == True:
+                x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month, y_bid, y_ask = x_date.cuda(), x_now.cuda(), x_previous_hour.cuda(), x_previous_day.cuda(), x_previous_week.cuda(), x_previous_month.cuda(), y_bid.cuda(), y_ask.cuda()
                 
             # Set the gradient to none before each iteration
             optimizer.zero_grad(set_to_none=True)
@@ -116,6 +120,9 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
         
         # Iterate over validation dataset
         for x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month, y_bid, y_ask in data_loader_validation:
+            
+            if memory_care == True:
+                x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month, y_bid, y_ask = x_date.cuda(), x_now.cuda(), x_previous_hour.cuda(), x_previous_day.cuda(), x_previous_week.cuda(), x_previous_month.cuda(), y_bid.cuda(), y_ask.cuda()
                 
             # Disable gradient during validation
             with torch.no_grad():
@@ -174,6 +181,9 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
     
     # Iterate over test dataset
     for x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month, y_bid, y_ask in data_loader_test:
+        
+        if memory_care == True:
+                x_date, x_now, x_previous_hour, x_previous_day, x_previous_week, x_previous_month, y_bid, y_ask = x_date.cuda(), x_now.cuda(), x_previous_hour.cuda(), x_previous_day.cuda(), x_previous_week.cuda(), x_previous_month.cuda(), y_bid.cuda(), y_ask.cuda()
                 
         # Disable gradient during test
         with torch.no_grad():
@@ -235,9 +245,10 @@ def evaluate_for_testing(model, dataset_train, dataset_validation, dataset_test,
         
     # Return model and datasets to CPU and empty cache
     model.cpu()
-    dataset_train.cpu()
-    dataset_validation.cpu()
-    dataset_test.cpu()
+    if memory_care == False:
+        dataset_train.cpu()
+        dataset_validation.cpu()
+        dataset_test.cpu()
     gc.collect()
     torch.cuda.empty_cache()
         
