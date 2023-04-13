@@ -1,7 +1,7 @@
 #!/bin/sh
-#SBATCH --job-name transformer_mlp_1_hour_memory
-#SBATCH --error transformer_mlp_1_hour_memory-error.e%j
-#SBATCH --output transformer_mlp_1_hour_memory-out.o%j
+#SBATCH --job-name mlp
+#SBATCH --error mlp-error.e%j
+#SBATCH --output mlp-out.o%j
 #SBATCH --partition shared-gpu
 #SBATCH --gpus=1
 #SBATCH --time 06:00:00
@@ -15,4 +15,4 @@ pip install numpy==1.21.5
 pip install pandas==1.4.4
 pip install optuna==3.1.0
 
-python main_tuning.py TransformerMLP1HourMemory
+python main_tuning.py MLP
