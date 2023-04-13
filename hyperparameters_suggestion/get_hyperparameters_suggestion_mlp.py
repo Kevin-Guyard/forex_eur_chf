@@ -1,6 +1,6 @@
 
 
-def get_hyperparameters_suggestion_mlp(trial, type_memory, n_hidden_layers):
+def get_hyperparameters_suggestion_mlp(trial):
     
     trial.suggest_int("batch_size_train", low=4, high=9)
     trial.suggest_categorical("optimizer", ["Adam", "AdamW"])
@@ -14,20 +14,12 @@ def get_hyperparameters_suggestion_mlp(trial, type_memory, n_hidden_layers):
     trial.suggest_int("embedding_dim_hour", low=4, high=15)
     trial.suggest_int("embedding_dim_weekday", low=2, high=4)
     
-    if type_memory == 'hour':
-        trial.suggest_int("n_previous_hour_values", low=1, high=720)
-    elif type_memory == 'day':
-        trial.suggest_int("n_previous_hour_values", low=0, high=720)
-        trial.suggest_int("n_previous_day_values", low=1, high=90)
-    elif type_memory == 'week':
-        trial.suggest_int("n_previous_hour_values", low=0, high=720)
-        trial.suggest_int("n_previous_day_values", low=0, high=90)
-        trial.suggest_int("n_previous_week_values", low=1, high=50)
-    elif type_memory == 'month':
-        trial.suggest_int("n_previous_hour_values", low=0, high=720)
-        trial.suggest_int("n_previous_day_values", low=0, high=90)
-        trial.suggest_int("n_previous_week_values", low=0, high=50)
-        trial.suggest_int("n_previous_month_values", low=1, high=36)
+    trial.suggest_int("n_previous_hour_values", low=0, high=720)
+    trial.suggest_int("n_previous_day_values", low=0, high=90)
+    trial.suggest_int("n_previous_week_values", low=0, high=50)
+    trial.suggest_int("n_previous_month_values", low=0, high=36)
+    
+    n_hidden_layers = trial.suggest_int("n_hidden_layers", low=0, high=5)
         
     for i in range(n_hidden_layers):
         trial.suggest_int("d_hidden_layer_" + str(i), low=2, high=13)
