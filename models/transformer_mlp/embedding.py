@@ -8,7 +8,7 @@ class Embedding(nn.Module):
         
         super(Embedding, self).__init__()
         
-        self.embedding_year = nn.Embedding(num_embeddings=11, embedding_dim=embedding_dim_year)
+        self.embedding_year = nn.Embedding(num_embeddings=12, embedding_dim=embedding_dim_year)
         self.embedding_month = nn.Embedding(num_embeddings=12, embedding_dim=embedding_dim_month)
         self.embedding_day = nn.Embedding(num_embeddings=31, embedding_dim=embedding_dim_day)
         self.embedding_hour = nn.Embedding(num_embeddings=24, embedding_dim=embedding_dim_hour)
