@@ -14,10 +14,10 @@ def get_hyperparameters_suggestion_mlp(trial):
     trial.suggest_int("embedding_dim_hour", low=4, high=15)
     trial.suggest_int("embedding_dim_weekday", low=2, high=4)
     
-    trial.suggest_int("n_previous_hour_values", low=0, high=720)
-    trial.suggest_int("n_previous_day_values", low=0, high=90)
-    trial.suggest_int("n_previous_week_values", low=0, high=50)
-    trial.suggest_int("n_previous_month_values", low=0, high=36)
+    trial.suggest_int("n_previous_hour_values", low=0, high=120)
+    trial.suggest_int("n_previous_day_values", low=0, high=30)
+    trial.suggest_int("n_previous_week_values", low=0, high=26)
+    trial.suggest_int("n_previous_month_values", low=0, high=24)
     
     n_hidden_layers = trial.suggest_int("n_hidden_layers", low=0, high=5)
         

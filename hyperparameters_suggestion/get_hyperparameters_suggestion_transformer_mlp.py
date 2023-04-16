@@ -22,10 +22,10 @@ def get_hyperparameters_suggestion_transformer_mlp(trial):
     trial.suggest_int("d_model", low=max(n_head, 3), high=10)
     trial.suggest_int("d_hidden", low=3, high=12)
 
-    trial.suggest_int("n_previous_hour_values", low=0, high=720)
-    trial.suggest_int("n_previous_day_values", low=0, high=90)
-    trial.suggest_int("n_previous_week_values", low=0, high=50)
-    trial.suggest_int("n_previous_month_values", low=0, high=36)
+    trial.suggest_int("n_previous_hour_values", low=0, high=120)
+    trial.suggest_int("n_previous_day_values", low=0, high=30)
+    trial.suggest_int("n_previous_week_values", low=0, high=26)
+    trial.suggest_int("n_previous_month_values", low=0, high=24)
     
     n_hidden_layers = trial.suggest_int("n_hidden_layers", low=0, high=5)
         
